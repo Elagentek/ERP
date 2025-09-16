@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     'Dashboard',
     'Productos',
     'Ventas',
+
+    
 ]
 
 MIDDLEWARE = [
@@ -54,6 +56,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    
 ]
 
 ROOT_URLCONF = 'Agrolat.urls'
@@ -85,9 +88,9 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'agrolat_db',          # Nombre de la BD
         'USER': 'agrolat_user',        # Usuario que creaste en pgAdmin
-        'PASSWORD': 'Black10021', # Tu contraseña segura
+        'PASSWORD': 'admin0812', # Tu contraseña segura
         'HOST': 'localhost',           # O la IP/hostname si es servidor
-        'PORT': '5433',                # Puerto de PostgreSQL
+        'PORT': '5432',                # Puerto de PostgreSQL
     }
 }
 

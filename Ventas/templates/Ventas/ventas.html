@@ -1,4 +1,4 @@
-{% load widget_tweaks %}
+{% load static %}
 {% load custom_filters %}
 <!DOCTYPE html>
 <html lang="es">
@@ -6,33 +6,26 @@
     <meta charset="UTF-8">
     <title>Gestión de Ventas</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{% static 'css/ventas.css' %}" rel="stylesheet"> <!-- Tu CSS custom -->
 </head>
 <body class="bg-light">
 
-<!-- Navbar -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
-    <div class="container-fluid">
-        <a class="navbar-brand fw-bold" href="#">AGROLAT</a>
-        <div class="collapse navbar-collapse">
-            <ul class="navbar-nav ms-auto">
-                <li class="nav-item">
-                    <span class="nav-link">👤 Bienvenido, {{ user.username }}</span>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'logout' %}">Cerrar sesión</a>
-                </li>
-            </ul>
-        </div>
-    </div>
-</nav>
-
 <div class="container py-5">
-    <h2 class="mb-4 fw-bold text-primary">Gestión de Ventas</h2>
+    <h2 class="mb-4 fw-bold text-primary text-center">Gestión de Ventas</h2>
+
+    <!-- Alertas -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} text-center fw-bold rounded-3 shadow-sm">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
 
     <!-- Métricas -->
     <div class="row text-center mb-4">
         <div class="col-md-4">
-            <div class="card shadow-sm border-0">
+            <div class="card metric-card shadow-sm border-0">
                 <div class="card-body">
                     <h6 class="text-primary">Total Ventas</h6>
                     <h3 class="fw-bold">{{ total_ventas }}</h3>
@@ -40,7 +33,7 @@
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card shadow-sm border-0">
+            <div class="card metric-card shadow-sm border-0">
                 <div class="card-body">
                     <h6 class="text-success">Ingresos Totales</h6>
                     <h3 class="fw-bold text-success">{{ ingresos_totales|currency_clp }}</h3>
@@ -48,7 +41,7 @@
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card shadow-sm border-0">
+            <div class="card metric-card shadow-sm border-0">
                 <div class="card-body">
                     <h6 class="text-info">Productos Vendidos</h6>
                     <h3 class="fw-bold">{{ productos_vendidos }}</h3>
@@ -58,14 +51,16 @@
     </div>
 
     <!-- Botones -->
-    <button class="btn btn-success mb-3 rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#crearVentaModal">
-        + Nueva Venta
-    </button>
-    <a href="{% url 'dashboard' %}" class="btn btn-secondary mb-3 rounded-pill px-4">
-        ⬅ Volver al Dashboard
-    </a>
+    <div class="d-flex justify-content-between mb-3">
+        <button class="btn btn-success rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#crearVentaModal">
+            + Nueva Venta
+        </button>
+        <a href="{% url 'dashboard' %}" class="btn btn-secondary rounded-pill px-4">
+            ⬅ Volver al Dashboard
+        </a>
+    </div>
 
-    <!-- Tabla de ventas -->
+    <!-- Tabla de ventas agrupadas por cliente -->
     <div class="table-responsive shadow-sm rounded">
         <table class="table table-striped table-hover align-middle bg-white">
             <thead class="table-primary text-center">
@@ -79,81 +74,95 @@
                 </tr>
             </thead>
             <tbody>
-                {% for venta in ventas %}
-                <tr>
-                    <td>{{ venta.cliente }}</td>
-                    <td>{{ venta.producto.nombre }}</td>
-                    <td>{{ venta.cantidad }}</td>
-                    <td class="fw-bold text-success">{{ venta.total|currency_clp }}</td>
-                    <td>{{ venta.fecha|date:"d/m/Y H:i" }}</td>
-                    <td class="text-center">
-                        <button class="btn btn-sm btn-outline-primary rounded-pill px-3"
-                                data-bs-toggle="modal"
-                                data-bs-target="#editarVentaModal{{ venta.id }}">
-                            Editar
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger rounded-pill px-3"
-                                data-bs-toggle="modal"
-                                data-bs-target="#eliminarVentaModal{{ venta.id }}">
-                            Eliminar
-                        </button>
-                    </td>
-                </tr>
+                {% for cliente, ventas in ventas_por_cliente %}
+                    <tr class="table-secondary fw-bold text-center">
+                        <td colspan="6">{{ cliente }}</td>
+                    </tr>
+                    {% for venta in ventas %}
+                    <tr>
+                        <td></td>
+                        <td>{{ venta.producto.nombre }}</td>
+                        <td>{{ venta.cantidad }}</td>
+                        <td class="fw-bold text-success">{{ venta.total|currency_clp }}</td>
+                        <td>{{ venta.fecha|date:"d/m/Y H:i" }}</td>
+                        <td class="text-center">
+                            <!-- Botón Editar -->
+                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3" 
+                                    data-bs-toggle="modal" data-bs-target="#editarVentaModal{{ venta.id }}">
+                                Editar
+                            </button>
+                            <!-- Botón Eliminar -->
+                            <button class="btn btn-sm btn-outline-danger rounded-pill px-3" 
+                                    data-bs-toggle="modal" data-bs-target="#eliminarVentaModal{{ venta.id }}">
+                                Eliminar
+                            </button>
+                        </td>
+                    </tr>
 
-                <!-- Modal Editar Venta -->
-                <div class="modal fade" id="editarVentaModal{{ venta.id }}" tabindex="-1">
-                    <div class="modal-dialog">
-                        <form method="post">
-                            {% csrf_token %}
-                            <input type="hidden" name="id" value="{{ venta.id }}">
-                            <input type="hidden" name="editar" value="1">
-                            <div class="modal-content">
-                                <div class="modal-header bg-primary text-white">
-                                    <h5 class="modal-title">Editar Venta</h5>
-                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <div class="mb-3">
-                                        <label class="form-label">Cliente</label>
-                                        <input type="text" name="cliente" value="{{ venta.cliente }}" class="form-control">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Cantidad</label>
-                                        <input type="number" name="cantidad" value="{{ venta.cantidad }}" class="form-control">
-                                    </div>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="submit" class="btn btn-primary rounded-pill px-4">Guardar cambios</button>
-                                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+                    <!-- Modal Editar -->
+<div class="modal fade" id="editarVentaModal{{ venta.id }}" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="id" value="{{ venta.id }}">
+      <input type="hidden" name="editar" value="1">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title">Editar Venta</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <!-- Producto mostrado como solo-lectura -->
+          <div class="mb-3">
+            <label class="form-label">Producto</label>
+            <input type="text" class="form-control" value="{{ venta.producto.nombre }}" readonly>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Cliente</label>
+            <input type="text" name="cliente" value="{{ venta.cliente }}" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Cantidad</label>
+            <input type="number" name="cantidad" value="{{ venta.cantidad }}" min="1" class="form-control" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary rounded-pill px-4">Guardar</button>
+          <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
 
-                <!-- Modal Eliminar Venta -->
-                <div class="modal fade" id="eliminarVentaModal{{ venta.id }}" tabindex="-1">
-                    <div class="modal-dialog">
-                        <form method="post">
-                            {% csrf_token %}
-                            <input type="hidden" name="id" value="{{ venta.id }}">
-                            <input type="hidden" name="eliminar" value="1">
-                            <div class="modal-content">
-                                <div class="modal-header bg-danger text-white">
-                                    <h5 class="modal-title">Eliminar Venta</h5>
-                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    <!-- Modal Eliminar -->
+                    <div class="modal fade" id="eliminarVentaModal{{ venta.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <form method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="id" value="{{ venta.id }}">
+                                <input type="hidden" name="eliminar" value="1">
+                                <div class="modal-content">
+                                    <div class="modal-header bg-danger text-white">
+                                        <h5 class="modal-title">Eliminar Venta</h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>¿Seguro que deseas eliminar la venta de 
+                                            <strong>{{ venta.producto.nombre }}</strong> para 
+                                            <strong>{{ venta.cliente }}</strong>?</p>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="submit" class="btn btn-danger rounded-pill px-4">Eliminar</button>
+                                        <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                                    </div>
                                 </div>
-                                <div class="modal-body">
-                                    <p>¿Seguro que deseas eliminar la venta de <strong>{{ venta.producto.nombre }}</strong> para <strong>{{ venta.cliente }}</strong>?</p>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="submit" class="btn btn-danger rounded-pill px-4">Eliminar</button>
-                                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
-                                </div>
-                            </div>
-                        </form>
+                            </form>
+                        </div>
                     </div>
-                </div>
+                    {% endfor %}
+                {% empty %}
+                    <tr><td colspan="6" class="text-center">No hay ventas registradas.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
