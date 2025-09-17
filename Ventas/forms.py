@@ -4,9 +4,9 @@ from .models import Venta
 class VentaForm(forms.ModelForm):
     class Meta:
         model = Venta
-        fields = ['cliente', 'producto', 'cantidad']
-        widgets = {
-            'cliente': forms.TextInput(attrs={'class': 'form-control'}),
-            'producto': forms.Select(attrs={'class': 'form-control'}),
-            'cantidad': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
-        }
+        fields = ["cliente", "producto", "cantidad", "tipo", "fecha_entrega", "direccion"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["fecha_entrega"].widget.attrs.update({"type": "date"})
+        self.fields["direccion"].widget.attrs.update({"placeholder": "Ej: Calle 123, Ciudad"})

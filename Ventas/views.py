@@ -6,10 +6,12 @@ from collections import defaultdict
 from .models import Venta
 from .forms import VentaForm
 
+
 def ventas_list(request):
+    # Obtener todas las ventas, más recientes primero
     ventas = Venta.objects.all().order_by('-fecha')
 
-    # Agrupar por cliente
+    # Agrupar ventas por cliente
     ventas_por_cliente = defaultdict(list)
     for v in ventas:
         ventas_por_cliente[v.cliente].append(v)
@@ -20,9 +22,9 @@ def ventas_list(request):
     ingresos_totales = ventas.aggregate(Sum('total'))['total__sum'] or 0
     productos_vendidos = ventas.aggregate(Sum('cantidad'))['cantidad__sum'] or 0
 
-    # Crear / Editar / Eliminar en la misma vista
+    # Manejo de formularios (CRUD en una sola vista)
     if request.method == "POST":
-        # CREAR
+        # ✅ CREAR
         if "crear" in request.POST:
             form = VentaForm(request.POST)
             if form.is_valid():
@@ -41,7 +43,7 @@ def ventas_list(request):
             else:
                 messages.error(request, "⚠️ Error al registrar la venta. Revisa los campos.")
 
-        # EDITAR (solo cliente y cantidad, mantiene el producto)
+        # ✏️ EDITAR
         elif "editar" in request.POST:
             venta = get_object_or_404(Venta, id=request.POST.get("id"))
             producto = venta.producto
@@ -54,16 +56,14 @@ def ventas_list(request):
                 messages.error(request, "⚠️ Cantidad inválida.")
                 return redirect("ventas_list")
 
-            # Ajuste de stock por diferencia
+            # Ajustar stock según diferencia
             delta = nueva_cant - old_cant
-            if delta > 0:
-                # necesita stock adicional
+            if delta > 0:  # aumenta la cantidad
                 if producto.stock < delta:
                     messages.error(request, "⚠️ Stock insuficiente para aumentar la cantidad.")
                     return redirect("ventas_list")
                 producto.stock -= delta
-            elif delta < 0:
-                # se devuelve stock
+            elif delta < 0:  # disminuye cantidad → devolver stock
                 producto.stock += (-delta)
 
             # Guardar cambios
@@ -74,10 +74,10 @@ def ventas_list(request):
             venta.save()
             messages.success(request, "✏️ Venta actualizada correctamente.")
 
-        # ELIMINAR (opcional: reponer stock)
+        # 🗑️ ELIMINAR
         elif "eliminar" in request.POST:
             venta = get_object_or_404(Venta, id=request.POST.get("id"))
-            # si quieres reponer stock al eliminar, deja estas dos líneas:
+            # reponer stock si eliminas la venta
             venta.producto.stock += venta.cantidad
             venta.producto.save()
 
@@ -86,9 +86,10 @@ def ventas_list(request):
 
         return redirect("ventas_list")
 
+    # Contexto para renderizar la plantilla
     context = {
         "ventas_por_cliente": ventas_por_cliente,
-        "form": VentaForm(),  # para el modal de crear
+        "form": VentaForm(),  # formulario para modal de crear
         "total_ventas": total_ventas,
         "ingresos_totales": ingresos_totales,
         "productos_vendidos": productos_vendidos,
